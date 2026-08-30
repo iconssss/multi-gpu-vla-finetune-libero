@@ -1,0 +1,12 @@
+__pycache__/
+*.pyc
+logs/
+*.pid
+*.mp4
+*.tgz
+checkpoints/
+runs/
+cache/
+.env
+*.pem
+*.key

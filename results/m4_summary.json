@@ -1,0 +1,28 @@
+{
+  "seed": 1000,
+  "protocol": "lerobot v0.6.0 official lerobot_eval, official init states (.pruned_init idx 0-9), official success criterion",
+  "suites": {
+    "spatial": {
+      "successes": 4,
+      "episodes": 100,
+      "SR": 0.04,
+      "task_SR_min": 0.0,
+      "task_SR_max": 0.3,
+      "eval_s": 1335.5759358406067
+    },
+    "object": {
+      "missing": true
+    },
+    "goal": {
+      "missing": true
+    },
+    "long": {
+      "missing": true
+    }
+  },
+  "overall": {
+    "successes": 4,
+    "episodes": 100,
+    "SR": 0.04
+  }
+}

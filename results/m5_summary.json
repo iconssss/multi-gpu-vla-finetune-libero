@@ -1,0 +1,123 @@
+{
+  "tasks": {
+    "H": {
+      "id": 2,
+      "name": "pick_up_the_black_bowl_from_table_center_and_place_it_on_the_plate",
+      "m4_sr": 0.3
+    },
+    "M": {
+      "id": 6,
+      "name": "pick_up_the_black_bowl_next_to_the_cookie_box_and_place_it_on_the_plate",
+      "m4_sr": 0.1
+    },
+    "Z": {
+      "id": 0,
+      "name": "pick_up_the_black_bowl_between_the_plate_and_the_ramekin_and_place_it_on_the_plate",
+      "m4_sr": 0.0
+    }
+  },
+  "checkpoints": {
+    "lerobot/smolvla_base": {
+      "successes": 0,
+      "episodes": 15,
+      "sr": 0.0,
+      "per_task": {
+        "0": {
+          "successes": 0,
+          "episodes": 5,
+          "sr": 0.0
+        },
+        "2": {
+          "successes": 0,
+          "episodes": 5,
+          "sr": 0.0
+        },
+        "6": {
+          "successes": 0,
+          "episodes": 5,
+          "sr": 0.0
+        }
+      }
+    },
+    "step_1000": {
+      "successes": 0,
+      "episodes": 15,
+      "sr": 0.0,
+      "per_task": {
+        "0": {
+          "successes": 0,
+          "episodes": 5,
+          "sr": 0.0
+        },
+        "2": {
+          "successes": 0,
+          "episodes": 5,
+          "sr": 0.0
+        },
+        "6": {
+          "successes": 0,
+          "episodes": 5,
+          "sr": 0.0
+        }
+      }
+    },
+    "step_2500": {
+      "successes": 0,
+      "episodes": 15,
+      "sr": 0.0,
+      "per_task": {
+        "0": {
+          "successes": 0,
+          "episodes": 5,
+          "sr": 0.0
+        },
+        "2": {
+          "successes": 0,
+          "episodes": 5,
+          "sr": 0.0
+        },
+        "6": {
+          "successes": 0,
+          "episodes": 5,
+          "sr": 0.0
+        }
+      }
+    },
+    "step_5000": {
+      "successes": 0,
+      "episodes": 15,
+      "sr": 0.0,
+      "per_task": {
+        "0": {
+          "successes": 0,
+          "episodes": 5,
+          "sr": 0.0
+        },
+        "2": {
+          "successes": 0,
+          "episodes": 5,
+          "sr": 0.0
+        },
+        "6": {
+          "successes": 0,
+          "episodes": 5,
+          "sr": 0.0
+        }
+      }
+    }
+  },
+  "action_queue": {
+    "chunk_size": 50,
+    "n_action_steps": 50,
+    "model_forward_cadence": "queue empty",
+    "env_steps_per_replan": 50,
+    "verified_by": "SmolVLAPolicy.select_action source lines 330-353"
+  },
+  "horizon": {
+    "status": "NOT_TESTED",
+    "reason": "checkpoint comparison all 0/15; M5 stop rule"
+  },
+  "trend": "NO_SIGNAL",
+  "verdict": "PASS",
+  "horizon_runtime_s": 0
+}

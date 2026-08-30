@@ -1,0 +1,30 @@
+{
+  "status": "PASS",
+  "err": null,
+  "resume_from": "/root/shared-nvme/project10-vla/runs/m3_main_5k/step_5000",
+  "optimizer_resumed": true,
+  "start_step": 5000,
+  "end_step": 20000,
+  "steps_done": 20000,
+  "train_s": 3947.8466294175014,
+  "step_time_mean_s": 0.240467372977797,
+  "samples_per_s": 266.14837267719184,
+  "loss_5k_window": null,
+  "loss_10k_window": 0.5947145491838455,
+  "loss_15k_window": 0.5545352600514889,
+  "loss_20k_window": 0.5349206410348415,
+  "min_smoothed_loss_100w": 0.5170973323285579,
+  "peak_vram_bytes_per_rank": [
+    5053938688.0,
+    5053938688.0,
+    5053938688.0,
+    5053938688.0
+  ],
+  "nan_inf": false,
+  "nccl": "PASS",
+  "checkpoints": {
+    "10000": true,
+    "15000": true,
+    "20000": true
+  }
+}

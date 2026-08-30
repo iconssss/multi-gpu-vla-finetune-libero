@@ -1,0 +1,34 @@
+{
+  "run": "m3_main_5k",
+  "status": "PASS",
+  "err": null,
+  "nan_inf": false,
+  "steps_done": 5000,
+  "world_size": 4,
+  "batch_per_gpu": 16,
+  "global_batch": 64,
+  "lr": 1e-05,
+  "seed": 42,
+  "load_init_s": 26.624683022499084,
+  "train_s": 1388.969179276377,
+  "step_time_mean_s": 0.2531752001372279,
+  "step_time_max_s": 0.8528103213757277,
+  "samples_per_s": 252.78937259775148,
+  "vram_peak_bytes_per_rank": [
+    5061792768.0,
+    5055959040.0,
+    5055959040.0,
+    5061924352.0
+  ],
+  "stall_steps_gt1s": 0,
+  "first100_mean_loss": 1.9831000701947645,
+  "around1000_mean_loss": 0.9153062431585222,
+  "around2500_mean_loss": 0.7404196617149171,
+  "last100_mean_loss": 0.665288645029068,
+  "min_smoothed_loss_100w": 0.6498658180236816,
+  "ckpt": {
+    "1000": "save_pretrained",
+    "2500": "save_pretrained",
+    "5000": "save_pretrained"
+  }
+}

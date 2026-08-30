@@ -1,0 +1,84 @@
+{
+  "5k": {
+    "per_task": {
+      "0": {
+        "successes": 0,
+        "success_states": []
+      },
+      "2": {
+        "successes": 2,
+        "success_states": [
+          2,
+          4
+        ]
+      },
+      "6": {
+        "successes": 0,
+        "success_states": []
+      }
+    },
+    "total": 2
+  },
+  "20k": {
+    "per_task": {
+      "0": {
+        "successes": 0,
+        "success_states": []
+      },
+      "2": {
+        "successes": 3,
+        "success_states": [
+          1,
+          4,
+          7
+        ]
+      },
+      "6": {
+        "successes": 1,
+        "success_states": [
+          9
+        ]
+      }
+    },
+    "total": 4
+  },
+  "transitions": {
+    "0": {
+      "retained": [],
+      "lost": [],
+      "new": []
+    },
+    "2": {
+      "retained": [
+        4
+      ],
+      "lost": [
+        2
+      ],
+      "new": [
+        1,
+        7
+      ]
+    },
+    "6": {
+      "retained": [],
+      "lost": [],
+      "new": [
+        9
+      ]
+    }
+  },
+  "overall": {
+    "5k_total": 2,
+    "20k_total": 4,
+    "episodes_per_ckpt": 30,
+    "retained": 1,
+    "lost": 1,
+    "new": 3
+  },
+  "rng_protocol": {
+    "policy_seed": "20260831 + task_id*100 + init_state",
+    "mechanism": "VLAFlowMatching.sample_noise patched to per-batch-element torch.Generator; identical for both checkpoints"
+  },
+  "verdict": "TRAINING_SCALE_POSITIVE"
+}
