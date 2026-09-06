@@ -1,5 +1,16 @@
 # INTERVIEW GUIDE
 
+## 30-second version
+
+I built a reliable SmolVLA training and evaluation workflow on LIBERO. The
+training side used 4×RTX 4090 DDP and reached 3.82× scaling over one GPU. The
+more important result came from evaluation: I found that task order changed the
+flow-matching noise consumed by each checkpoint, so the original scaling
+comparison was not paired. I introduced per-episode environment and policy-RNG
+control, then reran 5K versus 20K checkpoints under identical noise streams.
+The controlled result was only 2/30 to 4/30, so I report a weak signal—not a
+high-performance claim—but the conclusion is now attributable to model weights.
+
 Nine questions this project is built to answer, with the evidence to cite for each.
 
 ## 1. Why SmolVLA + LIBERO?
@@ -16,11 +27,11 @@ Through the official API chain only: `LeRobotDataset` (PyAV video backend) → `
 
 ## 4. How was DDP configured, and why is speedup 3.82× and not 4×?
 
-torchrun `--standalone --nproc-per-node 4`, PyTorch DDP over NCCL, one `DistributedSampler` shard per rank, bf16, per-GPU batch 16 (global 64), AdamW lr 1e-5, `num_workers=4` + `persistent_workers` + prefetch to keep video decode off the critical path. The measured 3.82× (92.0 vs 24.1 samples/s at identical per-GPU batch) is the honest number: the remaining ~5% is gradient all-reduce overlap plus per-rank dataloader jitter. Throughput per GPU *improves* with batch (24 → 72 samples/s/GPU from bs4→bs16) because the 450M model underutilizes a 4090 at small batches — which is also why 4×bs16 reached 289 samples/s with only 5 GB VRAM per card.
+torchrun `--standalone --nproc-per-node 4`, PyTorch DDP over NCCL, one `DistributedSampler` shard per rank, bf16, per-GPU batch 16 (global 64), AdamW lr 1e-5, `num_workers=4` + `persistent_workers` + prefetch to keep video decode off the critical path. The measured 3.82× (92.0 vs 24.1 samples/s at identical per-GPU batch) is the honest number: the remaining ~5% is gradient all-reduce overlap plus per-rank dataloader jitter. Throughput per GPU _improves_ with batch (24 → 72 samples/s/GPU from bs4→bs16) because the 450M model underutilizes a 4090 at small batches — which is also why 4×bs16 reached 289 samples/s with only 5 GB VRAM per card.
 
 ## 5. Why does falling offline loss not imply closed-loop success?
 
-Flow-matching training loss measures one-step action prediction on demonstrator states. Closed-loop rollouts visit states the demonstrator never produced (covariate shift), and success requires 50-step open-loop chunks composed of actions that are individually plausible but jointly compounding errors. Empirically here: loss improved 1.98 → 0.665 (5K) → 0.535 (20K) while controlled Spatial success went 2/30 → 4/30. The replanning-horizon test (M5B) further showed the failure is not chunk staleness — replanning every 10 or 5 steps made success *worse* (3/10 → 1/10 → 0/10) — pointing at action-quality/observation-grounding limits rather than execution cadence.
+Flow-matching training loss measures one-step action prediction on demonstrator states. Closed-loop rollouts visit states the demonstrator never produced (covariate shift), and success requires 50-step open-loop chunks composed of actions that are individually plausible but jointly compounding errors. Empirically here: loss improved 1.98 → 0.665 (5K) → 0.535 (20K) while controlled Spatial success went 2/30 → 4/30. The replanning-horizon test (M5B) further showed the failure is not chunk staleness — replanning every 10 or 5 steps made success _worse_ (3/10 → 1/10 → 0/10) — pointing at action-quality/observation-grounding limits rather than execution cadence.
 
 ## 6. Why was the original M6 checkpoint comparison unreliable?
 
@@ -32,7 +43,7 @@ Freeze everything controllable per episode: identical official init state, ident
 
 ## 8. Main failure-diagnosis conclusions of the project?
 
-(1) Contract mismatch in the official LIBERO checkpoint — resolved by base + native features. (2) Missing processor stats in `save_pretrained` output — checkpoints must be made self-contained (config + model + optimizer + normalizer stats) or eval silently loads wrong normalization; fixed by re-saving the official processor state from dataset stats. (3) Infrastructure: single-EGL-device nodes need `CUDA_VISIBLE_DEVICES="N,0"` + `MUJOCO_EGL_DEVICE_ID=0` to place inference on GPU N while rendering on EGL device 0. (4) Chunk execution cadence is not the closed-loop bottleneck (M5B). (5) Offline loss ↓ ≠ closed-loop ↑; scale from 5K→20K gives at best a weak positive under controlled RNG (2/30→4/30, not significant). (6) Evaluation methodology itself was the biggest confound — controlled RNG changed the *direction* of the scaling conclusion.
+(1) Contract mismatch in the official LIBERO checkpoint — resolved by base + native features. (2) Missing processor stats in `save_pretrained` output — checkpoints must be made self-contained (config + model + optimizer + normalizer stats) or eval silently loads wrong normalization; fixed by re-saving the official processor state from dataset stats. (3) Infrastructure: single-EGL-device nodes need `CUDA_VISIBLE_DEVICES="N,0"` + `MUJOCO_EGL_DEVICE_ID=0` to place inference on GPU N while rendering on EGL device 0. (4) Chunk execution cadence is not the closed-loop bottleneck (M5B). (5) Offline loss ↓ ≠ closed-loop ↑; scale from 5K→20K gives at best a weak positive under controlled RNG (2/30→4/30, not significant). (6) Evaluation methodology itself was the biggest confound — controlled RNG changed the _direction_ of the scaling conclusion.
 
 ## 9. With more time, what's the highest-value next step?
 

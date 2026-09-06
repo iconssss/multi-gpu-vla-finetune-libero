@@ -1,58 +1,99 @@
-# Multi-GPU VLA Fine-Tuning, Closed-Loop Evaluation & Failure Diagnosis
+# Reliable Multi-GPU VLA Fine-Tuning and Evaluation on LIBERO
 
-End-to-end pipeline that fine-tunes **SmolVLA** (450M params) on **LIBERO** with 4×RTX 4090 DDP, evaluates it with the **official closed-loop rollout protocol**, and diagnoses why **offline training loss keeps improving while closed-loop success barely moves** — including the discovery and removal of a **stochastic-rollout RNG confound** in checkpoint comparisons.
+An end-to-end SmolVLA study covering native data-contract validation, 4-GPU
+training, official closed-loop evaluation, and a controlled investigation of
+why lower training loss did not translate into reliable task success.
 
-## What this project is
+![Project overview](figures/hero_evaluation_pipeline.svg)
 
-> A real VLA training system → 4-GPU DDP scaling → standardized closed-loop evaluation → offline/online metric divergence identified → stochastic rollout evaluation confound diagnosed → paired RNG-controlled checkpoint evaluation → a trustworthy training-scale verdict.
+## Why this matters
 
-It is **not** "SmolVLA reaches high success on LIBERO". The headline scientific outcome is a *negative-plus-methodological* one: with training loss dropping 1.98 → 0.53, controlled closed-loop success went only 2/30 → 4/30 — and the only reason that comparison is trustworthy at all is the per-episode paired RNG control designed in M7-R.
+Evaluating a stochastic robot policy is not just a matter of running more
+episodes. If two checkpoints see different initial states or consume different
+action-noise streams, an apparent improvement can come from the evaluator
+rather than the model.
 
-## Highlights
+This project found exactly that failure mode in an initial SmolVLA checkpoint
+comparison. I traced it to flow-matching noise sampled with `torch.normal`,
+then rebuilt the evaluation so each checkpoint receives the same LIBERO state
+and the same per-episode policy RNG stream. That correction reversed the
+direction of the original scaling conclusion.
 
-- **Native data/model contract** — 8D proprio state, 2×256×256 RGB cameras, 7D action, language task tokens; the official `lerobot/smolvla_libero` checkpoint was rejected because its 6D/3-camera contract cannot accept the native LIBERO observations without undocumented adapters.
-- **4×RTX 4090 DDP** — bf16, global batch 64, 0.22–0.25 s/step, ~289 samples/s, **3.82× speedup** over single GPU at identical per-GPU batch, ~5 GB VRAM/rank (>75% headroom on 24 GB).
-- **20K-step scaling study** — 5K→10K→15K→20K checkpoints, loss 0.665→0.535 with optimizer-state resume.
-- **Official closed-loop evaluation** — LeRobot v0.6.0 evaluator, official LIBERO init states and success criterion; policy inference latency mean 8.6 ms / p95 4.3 ms per env step (action-chunk forward 0.28 s every 50 steps).
-- **RNG confound diagnosis (key methodological contribution)** — SmolVLA's flow-matching rollout samples action noise via `torch.normal`; checkpoint comparisons made eval runs consume different RNG streams (task-order dependent), making raw comparisons non-paired. M7-R fixes this with `policy_seed = 20260831 + task_id*100 + init_state`, synchronized across Python/NumPy/Torch/CUDA plus a per-element `torch.Generator` inside `VLAFlowMatching.sample_noise` — identical noise streams for both checkpoints.
-- **Final verdict: WEAK POSITIVE TRAINING-SCALE SIGNAL** — controlled 5K: 2/30 vs 20K: 4/30. Small sample; no significance claimed; the earlier "scaling degrades" reading is retired as RNG-confounded.
+## Results at a glance
 
-## Pipeline (M0 → M7-R)
+| Evidence                           |                                         Result |
+| ---------------------------------- | ---------------------------------------------: |
+| 4×RTX 4090 DDP scaling             |   **3.82×** vs. 1 GPU at matched per-GPU batch |
+| Formal training data               | **1,693 episodes / 273,465 frames / 40 tasks** |
+| Training loss, 5K → 20K            |                              **0.665 → 0.535** |
+| RNG-controlled closed-loop success |                                **2/30 → 4/30** |
 
-| Stage | What | Outcome |
-|---|---|---|
-| M0 | Env + native contract gate (load, real batch, fwd/bwd/opt, tiny train) | PASS |
-| M1 | 4-GPU DDP throughput/stability smoke (bs 4/8/16 per GPU) | PASS, 3.82× |
-| M2 | Full dataset (1693 eps / 273,465 frames) + 1K fast run + ckpt reload | PASS |
-| M3 | 5K main run, self-contained checkpoints | PASS |
-| M4 | Official LIBERO rollout eval (Spatial full 100 eps: 4% SR) | PARTIAL (EGL device limits) |
-| M5 | Checkpoint comparison (base/1K/2.5K/5K) | 0/15, sampling ambiguity flagged |
-| M5B | Replanning-horizon test (execute 50/10/5 actions per chunk) | CHUNK EFFECT: NONE |
-| M6 | Resume 5K→20K + uncontrolled scaling eval | loss ↓, success flat — **confounded** |
-| M7 | Paired success matrix + RNG audit | Confound identified |
-| M7-R | RNG-controlled 5K vs 20K rollout (60 eps) | WEAK POSITIVE signal |
+The controlled result is a weak positive training-scale signal, not a claim of
+statistical significance or solved LIBERO performance. Its value is that the
+comparison is now attributable to checkpoint weights rather than task order or
+uncontrolled policy noise.
 
-## Repo layout
+## What I built
 
-```
-src/        training, DDP smoke, eval, RNG-control, aggregation scripts (all built on official LeRobot v0.6.0 APIs)
-results/    compact JSON/CSV: per-step metrics, eval summaries, controlled rollout matrix
-figures/    loss curve, DDP scaling, controlled success, paired transition heatmap
-README.md / RESULTS.md / INTERVIEW_GUIDE.md
-```
+- A native LIBERO/SmolVLA training path using the official LeRobot v0.6.0
+  dataset, processor, model, loss, and evaluator APIs.
+- A 4-GPU `torchrun`/DDP pipeline with bf16, distributed sampling,
+  self-contained checkpoints, optimizer-state resume, and throughput/VRAM
+  measurement.
+- Official closed-loop evaluation using LIBERO initialization states and
+  success predicates, plus action-horizon and checkpoint studies.
+- Per-episode paired RNG control across Python, NumPy, Torch, CUDA, and the
+  flow-matching noise generator.
+- Compact result artifacts and plots that preserve the evidence behind every
+  claim in this README.
 
-Key results in [RESULTS.md](RESULTS.md). Interview narration in [INTERVIEW_GUIDE.md](INTERVIEW_GUIDE.md).
+## Training and evaluation evidence
 
-## Stack
+The formal DDP configuration used a global batch of 64 and reached 289.3
+samples/s with about 5.1 GB VRAM per rank. The 5K run completed in 1,389 s; an
+optimizer-state resume extended it to 20K without NaNs, stalls, or NCCL errors.
 
-PyTorch 2.7.1+cu126 · LeRobot v0.6.0 (pinned, unmodified) · SmolVLA base · lerobot/libero (AV1 video, PyAV backend) · torchrun/DDP/NCCL · MuJoCo/robosuite EGL rendering · 4×RTX 4090.
+The initial full LIBERO-Spatial evaluation reached 4/100 success. More frequent
+replanning did not rescue the selected task: executing 50, 10, or 5 actions per
+chunk produced 3/10, 1/10, and 0/10 successes. This ruled out the default
+50-action execution interval as the main bottleneck in that test.
 
-## Reproducibility notes
+The rollout timing trace is heavy-tailed: cached-action environment steps had a
+4.3 ms p95, while a new 50-action chunk required about 0.28 s once per chunk;
+the amortized mean was 8.6 ms per environment step. These numbers are reported
+separately to avoid presenting the cached-action p95 as generation latency.
 
-- All training/eval goes through official paths: `LeRobotDataset`, `make_policy`, `make_pre_post_processors`, official forward/loss, official `lerobot_eval` CLI. No core source patches anywhere.
-- Checkpoints are made self-contained (model + config + optimizer + processor stats files) so eval never depends on hand-copied files.
-- Eval protocol: official LIBERO `.pruned_init` init states, official success predicate, seed 1000; controlled runs add per-episode policy RNG (see M7-R).
+## The evaluation bug and the fix
 
-## Future work (documented, not executed)
+The official evaluator seeds once per run. Because SmolVLA samples flow-matching
+noise, changing task order changes which random draws each checkpoint receives.
+The first cross-checkpoint comparison was therefore not paired.
 
-Task-conditioned offline action-error analysis; paired trajectory failure taxonomy; dataset/action-distribution diagnostics; targeted data balancing & failure-recovery data; larger-sample controlled closed-loop evaluation.
+The final protocol assigns a deterministic seed to every `(task, init_state)`
+pair and supplies per-element `torch.Generator` instances to the flow-matching
+sampler. The 5K and 20K checkpoints then receive identical environment starts
+and policy-noise sequences. Under this protocol, 20K retained one prior success,
+lost one, and gained three new successes.
+
+![Controlled closed-loop result](figures/C_controlled_success.png)
+
+## Scope and limitations
+
+- This is simulator evidence; no physical robot was controlled.
+- Final controlled evaluation contains 30 episodes per checkpoint and cannot
+  resolve small effect sizes.
+- Absolute success remains low. The project demonstrates a reliable training
+  and evaluation workflow, not a high-performing LIBERO policy.
+- The paired noise hook is an inference-time evaluation control, not a new VLA
+  architecture or training algorithm.
+
+## Repository guide
+
+- [RESULTS.md](RESULTS.md) — milestone evidence and exact numerical results
+- [INTERVIEW_GUIDE.md](INTERVIEW_GUIDE.md) — technical decisions and likely questions
+- `src/` — DDP training, checkpointing, evaluation, and RNG-control code
+- `results/` — compact JSON/CSV evidence
+- `figures/` — training, scaling, controlled success, and transition plots
+
+**Stack:** PyTorch 2.7.1, LeRobot v0.6.0, SmolVLA, LIBERO, MuJoCo/robosuite,
+NCCL DDP, bf16, and 4×RTX 4090.
